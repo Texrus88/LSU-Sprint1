@@ -10,6 +10,9 @@ namespace LSU_App
         private readonly AuthService _auth = new();
         private readonly AdmissionsService _admissions = new();
         private UserAccount? _session;
+        //Modified 04OCT25 Karima
+        private readonly CourseCatalogService _courses = new();
+        private readonly RegistrationService _registration;
 
         // This is optional for demo identities
         private readonly Administrator _adminModel = new(101, "Randall", "Hutton", "Registrar");
