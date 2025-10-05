@@ -9,7 +9,10 @@ namespace LSU_App
     {
         private readonly AuthService _auth = new();
         private readonly AdmissionsService _admissions = new();
-        private UserAccount? _session;
+        
+        //Modified 04OCT25 Karima
+        private AuthService.Session? _session;
+        
         //Modified 04OCT25 Karima
         private readonly CourseCatalogService _courses = new();
         private readonly RegistrationService _registration;
@@ -22,11 +25,39 @@ namespace LSU_App
         {
             InitializeComponent();
 
-            // These are the seed  for the demo account users
-            _auth.AddUser("alice", "pass123", Role.Student);
-            _auth.AddUser("bob", "pass123", Role.Faculty);
-            _auth.AddUser("admin", "admin123", Role.Admin);
+            // Ensure LocalDB is created
+            DbInitializer.EnsureMigratedAndSeeded();
+
+
+            // UI events, refresh course
+            btnLogin.Click += BtnLogin_Click;
+            btnRegister.Click += BtnRegister_Click;
+
+     
         }
+
+        ///Register handler
+        ///Modified 05OCT25 Karima
+        private void btnRegister_Click(object? sender, EventArgs e)
+        {
+            if (_session is null || _session.Role != RoleName.Student)
+            {
+                MessageBox.Show("Student login required.", "Register",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (lstCourses.SelectedItem is not Course c)
+            {
+                MessageBox.Show("Select a course first.", "Register",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var (ok, msg) = _registration.Register(_session.UserId, c.Code);
+            MessageBox.Show(msg, ok ? "Registered" : "Registration Failed");
+            if (ok) RefreshLists();
+        }
+
 
         private void Form1_Load(object? sender, EventArgs e)
         {
@@ -48,16 +79,20 @@ namespace LSU_App
         {
             var u = txtUser.Text.Trim();
             var p = txtPass.Text;
-            _session = _auth.Login(u, p);
-
-            if (_session is null)
+            
+            var s = _auth.Login(u, p);    // returns AuthService.Session?
+            if (s is null)
             {
-                MessageBox.Show("Invalid credentials.", "Login", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Invalid credentials.", "Login",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            lblLoggedInAs.Text = $"Logged in as: {_session.Username} ({_session.Role})";
-            SwitchRoleUI(_session.Role);
+            _session = s;
+            lblLoggedInAs.Text = $"Logged in as: {s.Username} ({s.Role})";
+            SwitchRoleUI(s.Role == RoleName.Admin ? Role.Admin :
+                         s.Role == RoleName.Faculty ? Role.Faculty : Role.Student);
+
             RefreshLists();
         }
 
